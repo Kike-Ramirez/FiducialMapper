@@ -1,0 +1,6 @@
+ofxGui
+ofxOpenCv
+ofxFiducialFinder
+ofxGLWarper
+ofxXmlSettings
+ofxSecondWindow
