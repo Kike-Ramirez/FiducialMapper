@@ -7,6 +7,7 @@
 #include "ofxFidMain.h"
 #include "ofxGui.h"
 #include "ofxGLWarper.h"
+#include "ofxSecondWindow.h"
 
 //stupid ball class
 class card{
@@ -125,10 +126,17 @@ class ofApp : public ofSimpleApp{
         ofFbo               canvas2;
         ofFbo               canvasWarp;
         ofFbo               output;
+        ofFbo               warpedOutput;
         ofPixels            pixels;
         ofMesh              quadRoi;
-        ofxGLWarper         warper;
-        card cards[10];
+        ofxGLWarper         warperGui;
+        ofxGLWarper         warperOutput;
+        ofxSecondWindow     secondWindow;
+        card                cards[10];
+
+        int whichDisplay;
+        int mainDisplayWidth, mainDisplayHeight;
+        int secondDisplayWidth, secondDisplayHeight;
     
 		void setup();
 		void update();

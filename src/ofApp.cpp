@@ -17,13 +17,51 @@ void ofApp::setup(){
     canvas2Pos = ofPoint(ofGetWidth()*2/3 + 5, 5);
     outputPos = ofPoint(ofGetWidth()/3 + 5, ofGetHeight()/3+5);
     
+    ofSetWindowTitle("FaceMapper - OTU CINEMA SL");
+    
+    CGDisplayCount displayCount;
+    CGDirectDisplayID displays[32];
+    
+    // grab the active displays
+    CGGetActiveDisplayList(32, displays, &displayCount);
+    
+    cout<<"displayCount "<<displayCount<<endl;
     
 	vidGrabber.setVerbose(true);
 	vidGrabber.initGrabber(camWidth, camHeight);
 	colorImg.allocate(camWidth, camHeight);
 	grayImage.allocate(canvasWidth, canvasHeight);
     warpedImg.allocate(canvasWidth, canvasHeight);
-	
+    
+    if (displayCount == 1) {
+        
+        whichDisplay = 0;
+        mainDisplayWidth = CGDisplayPixelsWide ( displays[whichDisplay] );
+        mainDisplayWidth = CGDisplayPixelsHigh ( displays[whichDisplay] );
+        
+    }
+    
+    else {
+        
+        whichDisplay = 1;
+        mainDisplayWidth = CGDisplayPixelsWide ( displays[0] );
+        mainDisplayHeight = CGDisplayPixelsHigh ( displays[0] );
+        secondDisplayWidth = CGDisplayPixelsWide ( displays[whichDisplay] );
+        secondDisplayHeight = CGDisplayPixelsHigh ( displays[whichDisplay] );
+        
+    }
+    
+    
+    // the arguments for the second window are its initial x and y position,
+    // and its width and height. the last argument is whether the window
+    // should be undecorated, i.e. title bar is visible. setting it to
+    // true removes the title bar.
+    
+    
+    if (displayCount == 1) secondWindow.setup("Output", 0, 0, 640, 480, false);
+    else secondWindow.setup("Output", mainDisplayWidth, 0, secondDisplayWidth, secondDisplayHeight, true);
+    
+    
 	threshold = 80;
 	bLearnBakground = true;
 	backgroundSubOn = false;
@@ -63,6 +101,7 @@ void ofApp::setup(){
     canvas2.allocate(canvasWidth, canvasHeight, GL_RGB);
     canvasWarp.allocate(canvasWidth, canvasHeight, GL_RGB);
     output.allocate(outputWidth, outputHeight, GL_RGB);
+    warpedOutput.allocate(outputWidth, outputHeight, GL_RGB);
     
     
     pixels.allocate(canvasWidth, canvasHeight, GL_RGB);
@@ -77,8 +116,12 @@ void ofApp::setup(){
     }
     
     // Inicializamos el warper
-    warper.setup(outputPos.x, outputPos.y, outputWidth, outputHeight);
-    warper.activate();
+    
+    
+    warperGui.setup(outputPos.x, outputPos.y, outputWidth, outputHeight);
+    warperGui.activate();
+    
+    warperOutput.setup(mainDisplayWidth, 0, secondDisplayWidth, secondDisplayHeight);; //initializates ofxGLWarper
     
     // Inicializamos el objeto "Bola"
     //lets setup some stupid particles
@@ -95,15 +138,41 @@ void ofApp::update(){
 	ofBackground(100,100,100);
 	vidGrabber.update();
     
-    if ((warping) && (!warper.isActive())) {
+    if ((warping) && (!warperGui.isActive())) {
         
-        warper.activate();
+        warperGui.activate();
+        warperOutput.activate();
+    }
+    
+    else if (warping) {
+
+        // Actualizamos posiciones
+        
+        ofPoint dif = ofPoint(outputPos.x, outputPos.y);
+        
+        float multWidth = (float) secondDisplayWidth / (float) outputWidth;
+        float multHeight = (float) secondDisplayHeight / (float) outputHeight;
+        ofPoint mult = ofPoint(multWidth, multHeight);
+        
+        
+        
+        
+        ofPoint tl = warperGui.getCorner(ofxGLWarper::TOP_LEFT);
+        ofPoint tr = warperGui.getCorner(ofxGLWarper::TOP_RIGHT);
+        ofPoint br = warperGui.getCorner(ofxGLWarper::BOTTOM_RIGHT);
+        ofPoint bl = warperGui.getCorner(ofxGLWarper::BOTTOM_LEFT);
+        
+        warperOutput.setCorner(ofxGLWarper::TOP_LEFT, (tl - dif) * mult);
+        warperOutput.setCorner(ofxGLWarper::TOP_RIGHT, (tr - dif) * mult);
+        warperOutput.setCorner(ofxGLWarper::BOTTOM_RIGHT, (br - dif) * mult);
+        warperOutput.setCorner(ofxGLWarper::BOTTOM_LEFT, (bl - dif) * mult);
         
     }
     
-    else if ((!warping) && (warper.isActive())) {
+    else if ((!warping) && (warperGui.isActive())) {
         
-        warper.deactivate();
+        warperGui.deactivate();
+        warperOutput.deactivate();
         
     }
 	
@@ -182,6 +251,7 @@ void ofApp::update(){
         
         // Dibujamos el canvas de salida
         output.begin();
+        
         ofBackground(0);
         
         if (warping) ofSetColor(255,255,0);
@@ -200,6 +270,7 @@ void ofApp::update(){
             int fiducialY = fiducial -> getY() * (float) outputHeight / (float) canvasHeight;
             float fiducialAngle = fiducial -> getAngleDeg() - 90;
             
+            ofRect(0,0,outputWidth, outputHeight);
             ofPushMatrix();
             
             ofTranslate(fiducialX, fiducialY);
@@ -248,11 +319,21 @@ void ofApp::draw(){
     // DIBUJAMOS IMAGEN BN FILTRADA EN CANVAS2
     canvas2.draw(canvas2Pos.x, canvas2Pos.y, canvasWidth, canvasHeight);
     
-    // DIBUJAMOS OUTPUT EN OUTPUT CANVAS
-    warper.begin();
-    output.draw(outputPos.x, outputPos.y, outputWidth, outputHeight);
-    warper.end();
+    warperGui.begin();
     
+    // DIBUJAMOS OUTPUT EN OUTPUT CANVAS
+    output.draw(outputPos.x, outputPos.y, outputWidth, outputHeight);
+    
+    warperGui.end();
+    
+    secondWindow.begin();
+    ofBackground(0);
+    warperOutput.begin();
+    output.draw(mainDisplayWidth, 0, secondDisplayWidth, secondDisplayHeight);
+    warperOutput.end();
+    warperOutput.draw();
+    secondWindow.end();
+
     gui.draw();
 	
 }
