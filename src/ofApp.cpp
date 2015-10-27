@@ -4,8 +4,8 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     
-    camWidth = 640;
-    camHeight = 480;
+    camWidth = 1024;
+    camHeight = 768;
     projWidth = 1024;
     projHeight = 768;
     canvasHeight = ofGetHeight() / 3 - 10;
